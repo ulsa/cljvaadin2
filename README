@@ -1,0 +1,16 @@
+# cljvaadin2
+
+Example Vaadin web application inspired by the Vaadin tutorial [http://vaadin.com/tutorial].
+
+## Usage
+
+lein deps
+lein compile
+lein uberwar
+cp <war> <tomcat>/webapps
+
+## License
+
+Copyright (C) 2011 Ulrik Sandberg
+
+Distributed under the Eclipse Public License, the same as Clojure.
