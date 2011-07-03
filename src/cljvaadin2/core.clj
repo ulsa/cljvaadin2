@@ -1,4 +1,5 @@
 (ns cljvaadin2.core
+  (:use [cljvaadin2.vaadin])
   (:require [clojure.string :as str])
   (:import [com.vaadin Application]
 	   [com.vaadin.data Property$ValueChangeListener]
@@ -26,15 +27,13 @@
       (.addContainerProperty ic p String ""))
 
     (doseq [i (range 1000)]
-      (let [id (.addItem ic)
-	    fn (count fnames)
-	    ln (count lnames)]
+      (let [id (.addItem ic)]
 	(.. ic
 	    (getContainerProperty id "First Name")
-	    (setValue (fnames (rand-int fn))))
+	    (setValue (fnames (rand-int (count fnames)))))
 	(.. ic
 	    (getContainerProperty id "Last Name")
-	    (setValue (lnames (rand-int ln))))))
+	    (setValue (lnames (rand-int (count lnames)))))))
     ic))
 
 (def address-book-data (create-dummy-data))
@@ -44,11 +43,11 @@
 	       .setSizeFull
 	       (.addComponent contact-list)
 	       (.setExpandRatio contact-list 1))
-	split-panel (doto (SplitPanel. SplitPanel/ORIENTATION_HORIZONTAL)
-		      (.addComponent left)
-		      (.addComponent contact-editor))]
+	split-panel (add-components
+		     (SplitPanel. SplitPanel/ORIENTATION_HORIZONTAL)
+		     left contact-editor)]
+    (main-window app "Address Book" split-panel)
     (.setSizeFull contact-list)
-    (.setMainWindow app (Window. "Address Book" split-panel))
     (.setSizeFull contact-editor)
     (.. contact-editor getLayout (setMargin true))
     (.setImmediate contact-editor true)
@@ -56,18 +55,16 @@
     (.addComponent left bottom-left-corner)))
 
 (defn init-contact-add-remove-buttons [_]
-  (doto bottom-left-corner
-    (.addComponent
-     (Button. "+" 
-	      (proxy [Button$ClickListener] []
-		(buttonClick [event]
-			     (.setValue contact-list (.addItem contact-list)))))))
+  (.addComponent bottom-left-corner
+		 (Button. "+" 
+			  (button-click-listener
+			   (fn [ev] (.setValue contact-list (.addItem contact-list))))))
   (def contact-removal-button
-     (Button. "-"
-	      (proxy [Button$ClickListener] []
-		(buttonClick [event]
-			     (.removeItem contact-list (.getValue contact-list))
-			     (.select contact-list nil)))))
+       (Button. "-"
+		(button-click-listener
+		 (fn [ev]
+		   (.removeItem contact-list (.getValue contact-list))
+		   (.select contact-list nil)))))
   (.setVisible contact-removal-button false)
   (.addComponent bottom-left-corner contact-removal-button))
 
@@ -77,12 +74,12 @@
   (.setSelectable contact-list true)
   (.setImmediate contact-list true)
   (.addListener contact-list
-		(proxy [Property$ValueChangeListener] []
-		  (valueChange [event]
-			       (let [id (.getValue contact-list)]
-				 (.setItemDataSource contact-editor
-						     (if id (.getItem contact-list id)))
-				 (.setVisible contact-removal-button (if id true false))))))
+		(property-change-listener
+		  (fn [ev]
+		    (let [id (.getValue contact-list)]
+		      (.setItemDataSource contact-editor
+					  (if id (.getItem contact-list id)))
+		      (.setVisible contact-removal-button (if id true false))))))
   visible-cols)
 
 (defn init-filtering-controls [app]
@@ -93,17 +90,15 @@
       (.setInputPrompt sf pn)
       (.setImmediate sf true)
       (.setExpandRatio bottom-left-corner sf 1)
-      (.addListener sf (proxy [Property$ValueChangeListener] []
-			 (valueChange [event]
-				      (.removeContainerFilters address-book-data pn)
-				      (when (and (not (str/blank? (.toString sf)))
-						 (not= pn sf))
-					(.addContainerFilter address-book-data pn (.toString sf)
-							     true false))
-				      (.. app
-					  getMainWindow
-					  (showNotification (str (.size address-book-data)
-								 " matches found")))))))))
+      (.addListener sf (property-change-listener
+			(fn [ev]
+			  (.removeContainerFilters address-book-data pn)
+			  (when (and (not (str/blank? (.toString sf)))
+				     (not= pn sf))
+			    (.addContainerFilter address-book-data pn (.toString sf)
+						 true false))
+			  (show-message (.getMainWindow app)
+					(str (.size address-book-data) " matches found"))))))))
   
 (defn main []
   (proxy [Application] []
