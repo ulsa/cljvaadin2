@@ -97,7 +97,7 @@
 				     (not= pn sf))
 			    (.addContainerFilter address-book-data pn (.toString sf)
 						 true false))
-			  (show-message (.getMainWindow app)
+			  (show-message (.getMainWindow app) nil
 					(str (.size address-book-data) " matches found"))))))))
   
 (defn main []
